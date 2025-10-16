@@ -1,0 +1,190 @@
+-- 诗词赏析网站数据库表结构（简化版 - 无用户功能）
+-- 创建时间: 2024-01-16
+-- 数据库: PostgreSQL
+
+-- 启用UUID扩展
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- 1. 诗人表 (authors)
+CREATE TABLE authors (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL,
+    dynasty VARCHAR(50) NOT NULL,
+    birth_year VARCHAR(20),
+    death_year VARCHAR(20),
+    alias VARCHAR(100),
+    birth_place VARCHAR(200),
+    biography TEXT,
+    achievements TEXT,
+    portrait_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. 诗词表 (poems)
+CREATE TABLE poems (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(200) NOT NULL,
+    author_id UUID NOT NULL REFERENCES authors(id),
+    dynasty VARCHAR(50) NOT NULL,
+    content TEXT NOT NULL,
+    background TEXT,
+    annotation TEXT,
+    translation TEXT,
+    rhythm_pattern TEXT,
+    tags TEXT[],
+    difficulty_level INTEGER DEFAULT 1 CHECK (difficulty_level BETWEEN 1 AND 5),
+    views_count INTEGER DEFAULT 0,
+    likes_count INTEGER DEFAULT 0,
+    is_verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 3. 赏析表 (appreciations)
+CREATE TABLE appreciations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    poem_id UUID NOT NULL REFERENCES poems(id),
+    title VARCHAR(200) NOT NULL,
+    content TEXT NOT NULL,
+    summary TEXT,
+    tags TEXT[],
+    likes_count INTEGER DEFAULT 0,
+    status VARCHAR(20) DEFAULT 'published' CHECK (status IN ('draft', 'published')),
+    is_featured BOOLEAN DEFAULT false,
+    featured_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 4. 标签表 (tags)
+CREATE TABLE tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
+    usage_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 5. 诗词标签关联表 (poem_tags)
+CREATE TABLE poem_tags (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    poem_id UUID NOT NULL REFERENCES poems(id),
+    tag_id UUID NOT NULL REFERENCES tags(id),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(poem_id, tag_id)
+);
+
+-- 6. 朝代表 (dynasties)
+CREATE TABLE dynasties (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(50) UNIQUE NOT NULL,
+    start_year INTEGER,
+    end_year INTEGER,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 7. 系统配置表 (system_config)
+CREATE TABLE system_config (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    config_key VARCHAR(100) UNIQUE NOT NULL,
+    config_value TEXT,
+    description TEXT,
+    is_public BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 创建索引以提高查询性能
+
+-- 诗词表索引
+CREATE INDEX idx_poems_author_id ON poems(author_id);
+CREATE INDEX idx_poems_dynasty ON poems(dynasty);
+CREATE INDEX idx_poems_title ON poems(title);
+CREATE INDEX idx_poems_views_count ON poems(views_count DESC);
+CREATE INDEX idx_poems_likes_count ON poems(likes_count DESC);
+CREATE INDEX idx_poems_created_at ON poems(created_at DESC);
+CREATE INDEX idx_poems_tags ON poems USING gin(tags);
+
+-- 赏析表索引
+CREATE INDEX idx_appreciations_poem_id ON appreciations(poem_id);
+CREATE INDEX idx_appreciations_status ON appreciations(status);
+CREATE INDEX idx_appreciations_likes_count ON appreciations(likes_count DESC);
+CREATE INDEX idx_appreciations_created_at ON appreciations(created_at DESC);
+
+-- 标签表索引
+CREATE INDEX idx_tags_name ON tags(name);
+CREATE INDEX idx_tags_usage_count ON tags(usage_count DESC);
+
+-- 诗词标签关联表索引
+CREATE INDEX idx_poem_tags_poem_id ON poem_tags(poem_id);
+CREATE INDEX idx_poem_tags_tag_id ON poem_tags(tag_id);
+
+-- 朝代表索引
+CREATE INDEX idx_dynasties_name ON dynasties(name);
+
+-- 创建触发器函数 - 自动更新updated_at字段
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- 为需要updated_at的表创建触发器
+CREATE TRIGGER update_poems_updated_at BEFORE UPDATE ON poems FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_appreciations_updated_at BEFORE UPDATE ON appreciations FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_system_config_updated_at BEFORE UPDATE ON system_config FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 插入初始数据
+
+-- 插入朝代数据
+INSERT INTO dynasties (name, start_year, end_year, description) VALUES
+('先秦', -2100, -221, '中国历史上最早的朝代时期'),
+('汉代', -202, 220, '中国历史上重要的统一王朝'),
+('魏晋南北朝', 220, 589, '中国历史上的分裂时期'),
+('唐代', 618, 907, '中国诗歌的黄金时代'),
+('宋代', 960, 1279, '词文化繁荣的时期'),
+('元代', 1271, 1368, '元曲发展的时期'),
+('明代', 1368, 1644, '小说和戏曲发展的时期'),
+('清代', 1644, 1912, '古典文学的总结时期');
+
+-- 插入系统配置
+INSERT INTO system_config (config_key, config_value, description, is_public) VALUES
+('site_name', '诗词赏析', '网站名称', true),
+('site_description', '探索千年文化瑰宝，品味诗词之美', '网站描述', true),
+('max_poems_per_page', '20', '每页显示诗词数量', false);
+
+-- 创建视图
+
+-- 诗词详情视图
+CREATE VIEW poem_details AS
+SELECT 
+    p.*,
+    a.name as author_name,
+    a.dynasty as author_dynasty,
+    a.biography as author_biography
+FROM poems p
+LEFT JOIN authors a ON p.author_id = a.id;
+
+-- 诗词统计视图
+CREATE VIEW poem_statistics AS
+SELECT 
+    d.name as dynasty_name,
+    COUNT(p.id) as total_poems,
+    SUM(p.views_count) as total_views,
+    SUM(p.likes_count) as total_likes
+FROM dynasties d
+LEFT JOIN poems p ON d.name = p.dynasty
+GROUP BY d.id, d.name
+ORDER BY d.id;
+
+COMMENT ON TABLE authors IS '诗人信息表';
+COMMENT ON TABLE poems IS '诗词内容表';
+COMMENT ON TABLE appreciations IS '诗词赏析表';
+COMMENT ON TABLE tags IS '标签表';
+COMMENT ON TABLE poem_tags IS '诗词标签关联表';
+COMMENT ON TABLE dynasties IS '朝代信息表';
+COMMENT ON TABLE system_config IS '系统配置表';
