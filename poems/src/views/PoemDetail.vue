@@ -66,6 +66,9 @@
         >
           {{ isFavorite ? '已收藏' : '收藏' }}
         </el-button>
+        <el-button type="primary" :icon="Reading" @click="enterReadingMode">
+          阅读模式
+        </el-button>
         <el-button :icon="Share" @click="sharePoem">
           分享
         </el-button>
@@ -118,6 +121,91 @@
       <el-button type="primary" @click="goBack">返回首页</el-button>
     </el-empty>
   </div>
+
+  <!-- 阅读模式模态框 -->
+  <el-dialog 
+    v-model="readingModeVisible" 
+    :title="`《${poem?.title}》 - ${poem?.author}`"
+    width="800px"
+    fullscreen
+    :before-close="exitReadingMode"
+  >
+    <div v-if="poem" class="reading-mode-container">
+      <!-- 阅读模式头部 -->
+      <div class="reading-header">
+        <div class="reading-controls">
+          <el-button :icon="ArrowLeft" @click="exitReadingMode" type="text">
+            退出阅读
+          </el-button>
+          <div class="reading-settings">
+            <el-button-group>
+              <el-button 
+                :type="fontSize === 'small' ? 'primary' : ''"
+                @click="changeFontSize('small')"
+                size="small"
+              >
+                小
+              </el-button>
+              <el-button 
+                :type="fontSize === 'medium' ? 'primary' : ''"
+                @click="changeFontSize('medium')"
+                size="small"
+              >
+                中
+              </el-button>
+              <el-button 
+                :type="fontSize === 'large' ? 'primary' : ''"
+                @click="changeFontSize('large')"
+                size="small"
+              >
+                大
+              </el-button>
+            </el-button-group>
+            <el-button-group>
+              <el-button 
+                :type="theme === 'light' ? 'primary' : ''"
+                @click="changeTheme('light')"
+                size="small"
+              >
+                浅色
+              </el-button>
+              <el-button 
+                :type="theme === 'dark' ? 'primary' : ''"
+                @click="changeTheme('dark')"
+                size="small"
+              >
+                深色
+              </el-button>
+            </el-button-group>
+          </div>
+        </div>
+      </div>
+
+      <!-- 阅读内容 -->
+      <div :class="['reading-content', `theme-${theme}`, `font-${fontSize}`]">
+        <div class="poem-title">{{ poem.title }}</div>
+        <div class="poem-author">{{ poem.author }} · {{ poem.dynasty }}</div>
+        <div class="poem-text">{{ poem.content }}</div>
+        
+        <!-- 诗词解析 -->
+        <div v-if="poem.analysis" class="poem-analysis">
+          <h3>诗词解析</h3>
+          <p>{{ poem.analysis }}</p>
+        </div>
+
+        <!-- 创作背景 -->
+        <div v-if="poem.background" class="poem-background">
+          <h3>创作背景</h3>
+          <p>{{ poem.background }}</p>
+        </div>
+      </div>
+
+      <!-- 阅读进度 -->
+      <div class="reading-progress">
+        <el-progress :percentage="readingProgress" :show-text="false" />
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -133,7 +221,8 @@ import {
   Share, 
   Download,
   Printer,
-  ChatDotRound
+  ChatDotRound,
+  Reading
 } from '@element-plus/icons-vue'
 import PoemCard from '../components/PoemCard.vue'
 
@@ -144,6 +233,10 @@ const poemStore = usePoemStore()
 const poem = ref(null)
 const loading = ref(true)
 const relatedPoems = ref([])
+const readingModeVisible = ref(false)
+const fontSize = ref('medium')
+const theme = ref('light')
+const readingProgress = ref(0)
 
 // 计算属性
 const isFavorite = computed(() => {
@@ -235,6 +328,28 @@ const viewPoemDetail = (relatedPoem) => {
 
 const readFullPoem = (relatedPoem) => {
   ElMessage.info(`阅读《${relatedPoem.title}》全文`)
+}
+
+const enterReadingMode = () => {
+  readingModeVisible.value = true
+  readingProgress.value = 0
+  // 模拟阅读进度
+  setTimeout(() => {
+    readingProgress.value = 100
+  }, 1000)
+}
+
+const exitReadingMode = () => {
+  readingModeVisible.value = false
+  readingProgress.value = 0
+}
+
+const changeFontSize = (size) => {
+  fontSize.value = size
+}
+
+const changeTheme = (newTheme) => {
+  theme.value = newTheme
 }
 
 // 生命周期
@@ -452,6 +567,168 @@ onMounted(() => {
   .poem-analysis,
   .poem-background {
     padding: 16px;
+  }
+}
+
+/* 阅读模式样式 */
+.reading-mode-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--reading-bg);
+  color: var(--reading-text);
+}
+
+.reading-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--reading-border);
+  background: var(--reading-header-bg);
+}
+
+.reading-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reading-settings {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.reading-content {
+  flex: 1;
+  padding: 40px;
+  overflow-y: auto;
+  transition: all 0.3s ease;
+}
+
+/* 字体大小设置 */
+.reading-content.font-small {
+  font-size: 14px;
+}
+
+.reading-content.font-medium {
+  font-size: 16px;
+}
+
+.reading-content.font-large {
+  font-size: 18px;
+}
+
+/* 主题设置 */
+.reading-content.theme-light {
+  --reading-bg: #ffffff;
+  --reading-text: #2c3e50;
+  --reading-border: #e0e0e0;
+  --reading-header-bg: #f8f9fa;
+}
+
+.reading-content.theme-dark {
+  --reading-bg: #1a1a1a;
+  --reading-text: #e0e0e0;
+  --reading-border: #333333;
+  --reading-header-bg: #2d2d2d;
+}
+
+.reading-content .poem-title {
+  font-size: 2.5rem;
+  text-align: center;
+  margin-bottom: 20px;
+  font-weight: bold;
+  color: var(--reading-text);
+}
+
+.reading-content .poem-author {
+  font-size: 1.2rem;
+  text-align: center;
+  margin-bottom: 40px;
+  color: var(--reading-text);
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.reading-content .poem-text {
+  font-size: 1.3rem;
+  line-height: 2;
+  text-align: center;
+  margin-bottom: 40px;
+  white-space: pre-line;
+  font-family: '楷体', 'STKaiti', serif;
+  color: var(--reading-text);
+}
+
+.reading-content .poem-analysis,
+.reading-content .poem-background {
+  max-width: 800px;
+  margin: 0 auto 30px;
+  padding: 30px;
+  background: var(--reading-header-bg);
+  border-radius: 12px;
+  border-left: 4px solid #667eea;
+}
+
+.reading-content .poem-analysis h3,
+.reading-content .poem-background h3 {
+  color: var(--reading-text);
+  margin-bottom: 15px;
+  font-size: 1.3rem;
+}
+
+.reading-content .poem-analysis p,
+.reading-content .poem-background p {
+  color: var(--reading-text);
+  line-height: 1.8;
+  margin: 0;
+  opacity: 0.9;
+}
+
+.reading-progress {
+  padding: 0 20px 20px;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .reading-content {
+    padding: 20px;
+  }
+  
+  .reading-content .poem-title {
+    font-size: 2rem;
+  }
+  
+  .reading-content .poem-text {
+    font-size: 1.1rem;
+  }
+  
+  .reading-content .poem-analysis,
+  .reading-content .poem-background {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reading-content {
+    padding: 15px;
+  }
+  
+  .reading-content .poem-title {
+    font-size: 1.8rem;
+  }
+  
+  .reading-content .poem-text {
+    font-size: 1rem;
+  }
+  
+  .reading-controls {
+    flex-direction: column;
+    gap: 15px;
+    align-items: stretch;
+  }
+  
+  .reading-settings {
+    justify-content: center;
   }
 }
 </style>
