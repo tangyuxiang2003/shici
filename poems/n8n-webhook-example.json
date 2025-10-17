@@ -1,0 +1,57 @@
+{
+  "name": "诗词AI助手工作流示例",
+  "description": "处理诗词AI助手对话的n8n工作流配置示例",
+  "trigger": {
+    "type": "webhook",
+    "properties": {
+      "path": "/webhook-test/chat-handler",
+      "method": "POST"
+    }
+  },
+  "nodes": [
+    {
+      "name": "Webhook触发器",
+      "type": "n8n-nodes-base.webhook",
+      "parameters": {
+        "path": "webhook/chat-handler",
+        "responseMode": "responseNode"
+      }
+    },
+    {
+      "name": "数据验证",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// 验证请求数据格式\nconst { message, context } = $input.first().json;\n\nif (!message || typeof message !== 'string') {\n  throw new Error('消息内容不能为空');\n}\n\nreturn $input.first().json;"
+      }
+    },
+    {
+      "name": "意图识别",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// 识别用户意图\nconst { message } = $input.first().json;\nconst lowerMessage = message.toLowerCase();\n\nlet intent = 'general';\nconst intents = {\n  '推荐': 'recommendation',\n  '介绍': 'introduction',\n  '李白': 'poet_li_bai',\n  '杜甫': 'poet_du_fu',\n  '苏轼': 'poet_su_shi',\n  '月亮': 'theme_moon',\n  '春天': 'theme_spring',\n  '爱情': 'theme_love',\n  '赏析': 'analysis',\n  '意思': 'meaning'\n};\n\nfor (const [keyword, intentType] of Object.entries(intents)) {\n  if (lowerMessage.includes(keyword)) {\n    intent = intentType;\n    break;\n  }\n}\n\nreturn { ...$input.first().json, intent };"
+      }
+    },
+    {
+      "name": "AI处理",
+      "type": "n8n-nodes-base.openAi",
+      "parameters": {
+        "model": "gpt-3.5-turbo",
+        "prompt": "你是一个专业的诗词AI助手，专门帮助用户了解中国古典诗词。请根据用户的意图和问题提供专业、准确的回答。\n\n用户问题: {{ $json.message }}\n意图分类: {{ $json.intent }}\n\n请用中文回答，回答要专业、详细，包含具体的诗词内容和赏析。"
+      }
+    },
+    {
+      "name": "响应格式化",
+      "type": "n8n-nodes-base.function",
+      "parameters": {
+        "functionCode": "// 格式化最终响应\nconst aiResponse = $input.first().json;\n\nreturn {\n  success: true,\n  data: {\n    response: aiResponse.choices[0].message.content,\n    suggestions: [\n      '了解更多相关诗词',\n      '查看诗人详细介绍',\n      '探索类似主题'\n    ]\n  },\n  timestamp: new Date().toISOString()\n};"
+      }
+    },
+    {
+      "name": "Webhook响应",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "parameters": {
+        "responseMode": "lastNode"
+      }
+    }
+  ]
+}

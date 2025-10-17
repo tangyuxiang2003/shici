@@ -43,6 +43,9 @@
         </div>
       </el-footer>
     </el-container>
+    
+    <!-- AI聊天助手 -->
+    <ChatAssistant />
   </div>
 </template>
 
@@ -55,6 +58,7 @@ import {
   UserFilled, 
   StarFilled 
 } from '@element-plus/icons-vue'
+import ChatAssistant from './components/ChatAssistant.vue'
 
 const route = useRoute()
 const activeIndex = ref('/')
