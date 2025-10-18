@@ -79,8 +79,9 @@ watch(() => route.path, (newPath) => {
 
 .app-header {
   padding: 0;
-  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #dee2e6;
 }
 
 .header-content {
@@ -93,14 +94,14 @@ watch(() => route.path, (newPath) => {
 }
 
 .logo h1 {
-  color: white;
+  color: #495057;
   margin: 0;
   font-size: 24px;
   font-weight: bold;
 }
 
 .logo .subtitle {
-  color: rgba(255, 255, 255, 0.8);
+  color: #6c757d;
   font-size: 12px;
   margin-left: 10px;
 }
@@ -111,20 +112,21 @@ watch(() => route.path, (newPath) => {
 }
 
 .nav-menu .el-menu-item {
-  color: white !important;
+  color: #495057 !important;
   border-bottom: 2px solid transparent;
   transition: all 0.3s ease;
 }
 
 .nav-menu .el-menu-item:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-bottom-color: rgba(255, 255, 255, 0.5);
+  background: rgba(108, 117, 125, 0.05) !important;
+  border-bottom-color: #adb5bd;
+  color: #212529 !important;
 }
 
 .nav-menu .el-menu-item.is-active {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-bottom-color: #ffd04b;
-  color: #ffd04b !important;
+  background: rgba(108, 117, 125, 0.08) !important;
+  border-bottom-color: #667eea;
+  color: #667eea !important;
 }
 
 .app-main {
@@ -133,10 +135,11 @@ watch(() => route.path, (newPath) => {
 }
 
 .app-footer {
-  background: #2c3e50;
-  color: white;
+  background: #f8f9fa;
+  color: #6c757d;
   text-align: center;
   padding: 20px;
+  border-top: 1px solid #dee2e6;
 }
 
 .footer-content {
