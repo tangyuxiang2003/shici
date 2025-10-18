@@ -56,37 +56,34 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { usePoemStore } from '../stores/poemStore'
 import { Delete } from '@element-plus/icons-vue'
 
+const poemStore = usePoemStore()
 const selectedFavorites = ref([])
 
-// 模拟收藏数据
-const favorites = ref([
-  {
-    id: 1,
-    title: '静夜思',
-    author: '李白',
-    dynasty: '唐代',
-    content: '床前明月光，疑是地上霜。举头望明月，低头思故乡。'
-  }
-])
+// 使用实际的收藏数据
+const favorites = computed(() => poemStore.favorites)
 
 const handleSelectionChange = (selection) => {
   selectedFavorites.value = selection
 }
 
 const removeFromFavorites = (poem) => {
-  const index = favorites.value.findIndex(fav => fav.id === poem.id)
-  if (index > -1) {
-    favorites.value.splice(index, 1)
-  }
+  poemStore.toggleFavorite(poem)
 }
 
 const clearAllFavorites = () => {
-  favorites.value = []
+  poemStore.favorites = []
+  localStorage.setItem('poem_favorites', '[]')
   selectedFavorites.value = []
 }
+
+// 初始化收藏列表
+onMounted(() => {
+  poemStore.initFavorites()
+})
 </script>
 
 <style scoped>

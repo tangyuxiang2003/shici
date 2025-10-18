@@ -301,6 +301,11 @@ const sharePoem = () => {
   color: #ffd04b !important;
 }
 
+.favorite-btn:hover {
+  color: #ffc107 !important;
+  transform: scale(1.1);
+}
+
 .poem-card__author {
   display: flex;
   align-items: center;
